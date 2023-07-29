@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "title": "Clean Architecture: A Craftsman's Guide to Software Structure and Design",
+    "author": "Robert Martin",
+    "date": "Sep 17, 2017",
+    "price": "$32",
+    "coverUrl": "http://localhost:4242/images/1.jpg"
+  },
+  {
+    "id": 2,
+    "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+    "author": "Robert Martin",
+    "date": "Aug 11, 2008",
+    "price": "$41",
+    "coverUrl": "http://localhost:4242/images/2.jpg"
+  },
+  {
+    "id": 3,
+    "title": "Effective TypeScript: 62 Specific Ways to Improve Your TypeScript",
+    "author": "Dan Vanderkam",
+    "date": "Nov 12, 2019",
+    "price": "$24",
+    "coverUrl": "http://localhost:4242/images/3.jpg"
+  },
+  {
+    "id": 4,
+    "title": "JavaScript: The Definitive Guide: Master the World's Most-Used Programming Language",
+    "author": "David Flanagan",
+    "date": "Jun 23, 2020",
+    "price": "$29",
+    "coverUrl": "http://localhost:4242/images/4.jpg"
+  },
+  {
+    "id": 5,
+    "title": "Programming in Haskell",
+    "author": "Graham Hutton",
+    "date": "Sep 1, 2016",
+    "price": "$37",
+    "coverUrl": "http://localhost:4242/images/5.jpg"
+  },
+  {
+    "id": 6,
+    "title": "Real World Haskell",
+    "author": "Bryan O'Sullivan, John Goerzen",
+    "date": "Dec 1, 2008",
+    "price": "$28",
+    "coverUrl": "http://localhost:4242/images/6.jpg"
+  },
+  {
+    "id": 7,
+    "title": "Building Microservices: Designing Fine-Grained Systems",
+    "author": "Sam Newman",
+    "date": "Sep 28, 2021",
+    "price": "$46",
+    "coverUrl": "http://localhost:4242/images/7.jpg"
+  },
+  {
+    "id": 8,
+    "title": "Python Crash Course, 2nd Edition: A Hands-On, Project-Based Introduction to Programming",
+    "author": "Eric Matthes",
+    "date": "May 3, 2019",
+    "price": "$23",
+    "coverUrl": "http://localhost:4242/images/8.jpg"
+  },
+  {
+    "id": 9,
+    "title": "Learning Redux: Write maintainable, consistent, and easy-to-test web applications",
+    "author": "Daniel Bugl ",
+    "date": "Aug 31, 2017",
+    "price": "$31",
+    "coverUrl": "http://localhost:4242/images/9.jpg"
+  }
+]
