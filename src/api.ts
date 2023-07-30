@@ -3,7 +3,7 @@ import { http } from "./http";
 
 const cacheService = new CacheService({
   config: {
-    staleTime: 1 * 60 * 1000,
+    staleTime: 0.1 * 60 * 1000,
   },
 });
 

@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { Book, api } from "./api";
+import { CacheService } from "./CacheService/CacheService";
+
+let counter = 1;
+
+const cacheService = new CacheService({
+  config: {
+    staleTime: 0.1 * 60 * 1000,
+  },
+});
 
 function App() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -15,6 +24,12 @@ function App() {
       });
   };
 
+  const updateCounter = () => {
+    const next = counter++;
+    console.log(next);
+    return next;
+  };
+
   return (
     <div>
       <h1>http-cache</h1>
@@ -27,6 +42,17 @@ function App() {
               {book.id} | {book.title}
             </div>
           ))}
+      </div>
+      <hr />
+      <div>
+        <button
+          onClick={() => {
+            const cached = cacheService.cacheSync("123", updateCounter);
+            console.log("cached:", cached);
+          }}
+        >
+          update counter (sync)
+        </button>
       </div>
     </div>
   );
