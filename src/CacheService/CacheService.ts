@@ -36,6 +36,21 @@ export class CacheService {
     return result;
   }
 
+  private syncEntryConfig(key: Key, config?: Partial<Config>): Config {
+    return {
+      ...this.config,
+      ...this.storage[key]?.config,
+      ...config,
+    };
+  }
+
+  private isStale(key: Key, staleTime: number): boolean {
+    return (
+      this.storage[key].isStale ||
+      +new Date() >= this.storage[key].timestamp + staleTime
+    );
+  }
+
   private createEntry(data: EntryData, config?: Partial<Config>): Entry {
     const nextConfig = {
       ...this.config,
@@ -103,19 +118,10 @@ export class CacheService {
     fn: () => Promise<T>,
     config?: Partial<Config>,
   ): Promise<T> {
-    const isEntryExists = key in this.storage;
+    const currentConfig = this.syncEntryConfig(key, config);
 
-    const currentConfig = {
-      ...this.config,
-      ...this.storage[key]?.config,
-      ...config,
-    };
-
-    if (isEntryExists) {
-      const isStale =
-        this.storage[key].isStale ||
-        +new Date() >= this.storage[key].timestamp + currentConfig.staleTime;
-
+    if (key in this.storage) {
+      const isStale = this.isStale(key, currentConfig.staleTime);
       if (this.storage[key].isExecuting || !isStale) {
         return Promise.resolve(this.storage[key].data as T);
       }
@@ -126,5 +132,24 @@ export class CacheService {
       this.storage[key] = this.createEntry(freshEntryData, currentConfig);
       return freshEntryData;
     });
+  }
+
+  public cacheSync<T = EntryData>(
+    key: Key,
+    fn: () => T,
+    config?: Partial<Config>,
+  ): T {
+    const currentConfig = this.syncEntryConfig(key, config);
+
+    if (key in this.storage) {
+      const isStale = this.isStale(key, currentConfig.staleTime);
+      if (!isStale) {
+        return this.storage[key].data as T;
+      }
+    }
+
+    const freshEntryData = fn();
+    this.storage[key] = this.createEntry(freshEntryData, currentConfig);
+    return freshEntryData;
   }
 }
