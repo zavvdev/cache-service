@@ -1,21 +1,18 @@
 export type Key = string;
 export type EntryData = unknown;
 
-interface EntryConfig extends Config {
-  timestamp: number;
-  isStale: boolean;
+export interface Config {
+  staleTime: number;
 }
 
 export type Entry<T = EntryData> = {
   data: T;
-  config: EntryConfig;
+  config: Config;
+  timestamp: number;
+  isStale: boolean;
+  isExecuting: boolean;
 };
 
 export interface Storage {
   [key: Key]: Entry;
-}
-
-export interface Config {
-  cacheTime: number;
-  staleTime: number;
 }

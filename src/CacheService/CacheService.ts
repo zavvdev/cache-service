@@ -2,7 +2,7 @@ import { CONFIG_DEFAULT } from "./config";
 import { Config, Entry, EntryData, Key, Storage } from "./types";
 
 interface Args {
-  config?: Config;
+  config?: Partial<Config>;
   preloadedStorage?: Storage;
 }
 
@@ -26,28 +26,27 @@ export class CacheService {
   }
 
   private markStale(key: Key): void {
-    const entry = this.storage[key];
-    this.storage = {
-      ...this.storage,
-      [key]: {
-        ...entry,
-        config: {
-          ...entry.config,
-          isStale: true,
-        },
-      },
-    };
+    this.storage[key].isStale = true;
   }
 
-  private createEntry(data: EntryData, config?: Config): Entry {
-    const nextConfig = config || CONFIG_DEFAULT;
+  private async withLock<T>(key: Key, fn: () => Promise<T>): Promise<T> {
+    this.storage[key].isExecuting = true;
+    const result = await fn();
+    this.storage[key].isExecuting = false;
+    return result;
+  }
+
+  private createEntry(data: EntryData, config?: Partial<Config>): Entry {
+    const nextConfig = {
+      ...this.config,
+      ...config,
+    };
     return {
       data,
-      config: {
-        ...nextConfig,
-        timestamp: +new Date(),
-        isStale: nextConfig.staleTime === 0,
-      },
+      config: nextConfig,
+      timestamp: +new Date(),
+      isStale: nextConfig.staleTime === 0,
+      isExecuting: false,
     };
   }
 
@@ -63,11 +62,8 @@ export class CacheService {
     }
   }
 
-  public set(key: Key, data: EntryData, config?: Config): void {
-    this.storage = {
-      ...this.storage,
-      [key]: this.createEntry(data, config),
-    };
+  public set(key: Key, data: EntryData, config?: Partial<Config>): void {
+    this.storage[key] = this.createEntry(data, config);
   }
 
   public remove(key: Key, exact: boolean = true) {
@@ -102,25 +98,33 @@ export class CacheService {
     this.storage = {};
   }
 
-  // public cache<T = EntryData>(
-  //   key: Key,
-  //   fn: () => T | Promise<T>,
-  //   config?: Config,
-  // ): T | Promise<T> {
-  //   const currentConfig = {
-  //     ...this.config,
-  //     ...config,
-  //   };
-  //   try {
-  //     let entryData = fn();
-  //     if (entryData instanceof Promise) {
-  //       entryData.then((result) => {
-  //         entryData = result;
-  //       });
-  //     }
-  //     if (key in this.storage) {
-  //       const entry = this.storage[key];
-  //     }
-  //   } catch (e) {}
-  // }
+  public async cache<T = EntryData>(
+    key: Key,
+    fn: () => Promise<T>,
+    config?: Partial<Config>,
+  ): Promise<T> {
+    const isEntryExists = key in this.storage;
+
+    const currentConfig = {
+      ...this.config,
+      ...this.storage[key]?.config,
+      ...config,
+    };
+
+    if (isEntryExists) {
+      const isStale =
+        this.storage[key].isStale ||
+        +new Date() >= this.storage[key].timestamp + currentConfig.staleTime;
+
+      if (this.storage[key].isExecuting || !isStale) {
+        return Promise.resolve(this.storage[key].data as T);
+      }
+    }
+
+    return await this.withLock(key, async () => {
+      const freshEntryData = await fn();
+      this.storage[key] = this.createEntry(freshEntryData, currentConfig);
+      return freshEntryData;
+    });
+  }
 }
