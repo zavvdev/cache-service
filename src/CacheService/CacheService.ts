@@ -8,10 +8,12 @@ interface Args {
 
 export class CacheService {
   private storage: Storage;
+  private pendingBuffer: Set<string>;
   private config: Config;
 
   constructor({ config, preloadedStorage }: Args) {
     this.storage = preloadedStorage || {};
+    this.pendingBuffer = new Set([]);
     this.config = {
       ...CONFIG_DEFAULT,
       ...config,
@@ -23,17 +25,6 @@ export class CacheService {
   private findKeysByPattern(pattern: string): Key[] {
     const keys = Object.keys(this.storage);
     return keys.filter((key) => key.includes(pattern));
-  }
-
-  private markStale(key: Key): void {
-    this.storage[key].isStale = true;
-  }
-
-  private async withLock<T>(key: Key, fn: () => Promise<T>): Promise<T> {
-    this.storage[key].isExecuting = true;
-    const result = await fn();
-    this.storage[key].isExecuting = false;
-    return result;
   }
 
   private syncEntryConfig(key: Key, config?: Partial<Config>): Config {
@@ -61,8 +52,48 @@ export class CacheService {
       config: nextConfig,
       timestamp: +new Date(),
       isStale: nextConfig.staleTime === 0,
-      isExecuting: false,
     };
+  }
+
+  private getCachedIfFresh<T>(key: Key, config: Config): T | undefined {
+    if (key in this.storage) {
+      const isStale = this.isStale(key, config.staleTime);
+      if (this.pendingBuffer.has(key) || !isStale) {
+        return this.storage[key].data as T;
+      }
+    }
+  }
+
+  private async refresh<T>(
+    key: Key,
+    fn: () => Promise<T>,
+    config: Config,
+  ): Promise<T> {
+    try {
+      this.pendingBuffer.add(key);
+      const freshEntryData = await fn();
+      this.storage[key] = this.createEntry(freshEntryData, config);
+      return freshEntryData;
+    } catch (e) {
+      delete this.storage[key];
+      throw e;
+    } finally {
+      this.pendingBuffer.delete(key);
+    }
+  }
+
+  private refreshSync<T>(key: Key, fn: () => T, config: Config): T {
+    try {
+      this.pendingBuffer.add(key);
+      const freshEntryData = fn();
+      this.storage[key] = this.createEntry(freshEntryData, config);
+      return freshEntryData;
+    } catch (e) {
+      delete this.storage[key];
+      throw e;
+    } finally {
+      this.pendingBuffer.delete(key);
+    }
   }
 
   // PUBLIC
@@ -81,7 +112,7 @@ export class CacheService {
     this.storage[key] = this.createEntry(data, config);
   }
 
-  public remove(key: Key, exact: boolean = true) {
+  public remove(key: Key, exact: boolean = true): void {
     if (exact && key in this.storage) {
       delete this.storage[key];
     }
@@ -97,13 +128,13 @@ export class CacheService {
 
   public invalidate(key: Key, exact: boolean = true): void {
     if (exact && key in this.storage) {
-      this.markStale(key);
+      this.storage[key].isStale = true;
     }
     if (!exact) {
       const keysToMark = this.findKeysByPattern(key);
       if (keysToMark.length > 0) {
         keysToMark.forEach((k) => {
-          this.markStale(k);
+          this.storage[k].isStale = true;
         });
       }
     }
@@ -119,19 +150,10 @@ export class CacheService {
     config?: Partial<Config>,
   ): Promise<T> {
     const currentConfig = this.syncEntryConfig(key, config);
-
-    if (key in this.storage) {
-      const isStale = this.isStale(key, currentConfig.staleTime);
-      if (this.storage[key].isExecuting || !isStale) {
-        return Promise.resolve(this.storage[key].data as T);
-      }
-    }
-
-    return await this.withLock(key, async () => {
-      const freshEntryData = await fn();
-      this.storage[key] = this.createEntry(freshEntryData, currentConfig);
-      return freshEntryData;
-    });
+    return (
+      this.getCachedIfFresh<T>(key, currentConfig) ||
+      this.refresh<T>(key, fn, currentConfig)
+    );
   }
 
   public cacheSync<T = EntryData>(
@@ -140,16 +162,9 @@ export class CacheService {
     config?: Partial<Config>,
   ): T {
     const currentConfig = this.syncEntryConfig(key, config);
-
-    if (key in this.storage) {
-      const isStale = this.isStale(key, currentConfig.staleTime);
-      if (!isStale) {
-        return this.storage[key].data as T;
-      }
-    }
-
-    const freshEntryData = fn();
-    this.storage[key] = this.createEntry(freshEntryData, currentConfig);
-    return freshEntryData;
+    return (
+      this.getCachedIfFresh<T>(key, currentConfig) ||
+      this.refreshSync<T>(key, fn, currentConfig)
+    );
   }
 }

@@ -1,4 +1,11 @@
+import { CacheService } from "./CacheService/CacheService";
 import { http } from "./http";
+
+const cacheService = new CacheService({
+  config: {
+    staleTime: 1 * 60 * 1000,
+  },
+});
 
 export interface Book {
   id: number;
@@ -7,7 +14,7 @@ export interface Book {
 
 class Api {
   async getBooks() {
-    return http.get<Book[]>("/books");
+    return cacheService.cache("books", () => http.get<Book[]>("/books"));
   }
 }
 

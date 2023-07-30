@@ -10,7 +10,6 @@ export type Entry<T = EntryData> = {
   config: Config;
   timestamp: number;
   isStale: boolean;
-  isExecuting: boolean;
 };
 
 export interface Storage {
