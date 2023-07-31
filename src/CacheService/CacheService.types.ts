@@ -1,17 +1,17 @@
-export type Key = string;
-export type EntryData = unknown;
+export type CacheKey = string;
+export type CacheEntryData = unknown;
 
-export interface Config {
+export interface CacheConfig {
   staleTime: number;
 }
 
-export type Entry<T = EntryData> = {
+export type CacheEntry<T = CacheEntryData> = {
   data: T;
-  config: Config;
+  config: CacheConfig;
   timestamp: number;
   isStale: boolean;
 };
 
-export interface Storage {
-  [key: Key]: Entry;
+export interface CacheStorage {
+  [key: CacheKey]: CacheEntry;
 }

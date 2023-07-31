@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import tk from "timekeeper";
 import { CacheService } from "./CacheService";
-import { Config, Storage } from "./CacheService.types";
+import { CacheConfig, CacheStorage } from "./CacheService.types";
 import { CONFIG_DEFAULT } from "./CacheService.config";
+
+// =========================================================
 
 describe("createKey", () => {
   it("should return created key", () => {
@@ -11,8 +13,10 @@ describe("createKey", () => {
   });
 });
 
+// =========================================================
+
 describe("get", () => {
-  const preloadedStorage: Storage = {
+  const preloadedStorage: CacheStorage = {
     foo: {
       data: 123,
       timestamp: 987654321,
@@ -36,8 +40,10 @@ describe("get", () => {
   });
 });
 
+// =========================================================
+
 describe("set", () => {
-  it("should create a new cache entry with default config from object", () => {
+  it("should create a new cache entry with default config", () => {
     const cacheService = new CacheService();
     const cachedData = { foo: 1 };
     const timestamp = 1330688329321;
@@ -57,7 +63,7 @@ describe("set", () => {
   it("should create a new cache entry with custom config", () => {
     const cacheService = new CacheService();
     const cachedData = { foo: 1 };
-    const config: Config = {
+    const config: CacheConfig = {
       staleTime: 2000,
     };
     const timestamp = 1330688329321;
@@ -75,9 +81,11 @@ describe("set", () => {
   });
 });
 
+// =========================================================
+
 describe("remove", () => {
   it("should remove cached entry from storage by exact key match", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -105,7 +113,7 @@ describe("remove", () => {
   });
 
   it("should remove cached entries from storage by partial key match", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -131,9 +139,11 @@ describe("remove", () => {
   });
 });
 
+// =========================================================
+
 describe("invalidate", () => {
   it("should invalidate cached entry from storage by exact key match", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -165,7 +175,7 @@ describe("invalidate", () => {
   });
 
   it("should invalidate cached entries from storage by partial key match", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -200,9 +210,11 @@ describe("invalidate", () => {
   });
 });
 
+// =========================================================
+
 describe("dump", () => {
   it("should return current storage", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -219,9 +231,11 @@ describe("dump", () => {
   });
 });
 
+// =========================================================
+
 describe("drop", () => {
   it("should remove all data from storage", () => {
-    const preloadedStorage: Storage = {
+    const preloadedStorage: CacheStorage = {
       foo: {
         data: 123,
         timestamp: 987654321,
@@ -239,10 +253,12 @@ describe("drop", () => {
   });
 });
 
+// =========================================================
+
 describe("cache", () => {
   it("should return fresh data on each call if staleTime=0", async () => {
     const cacheService = new CacheService();
-    const config: Config = {
+    const config: CacheConfig = {
       staleTime: 0,
     };
 
@@ -281,7 +297,7 @@ describe("cache", () => {
 
   it("should cache fn result", async () => {
     const cacheService = new CacheService();
-    const config: Config = {
+    const config: CacheConfig = {
       staleTime: 1000,
     };
 
@@ -337,10 +353,12 @@ describe("cache", () => {
   });
 });
 
+// =========================================================
+
 describe("cacheSync", () => {
   it("should return fresh data on each call if staleTime=0", () => {
     const cacheService = new CacheService();
-    const config: Config = {
+    const config: CacheConfig = {
       staleTime: 0,
     };
 
@@ -371,7 +389,7 @@ describe("cacheSync", () => {
 
   it("should cache fn result", () => {
     const cacheService = new CacheService();
-    const config: Config = {
+    const config: CacheConfig = {
       staleTime: 1000,
     };
 
@@ -426,3 +444,5 @@ describe("cacheSync", () => {
     });
   });
 });
+
+// =========================================================

@@ -1,15 +1,21 @@
 import { CONFIG_DEFAULT } from "./CacheService.config";
-import { Config, Entry, EntryData, Key, Storage } from "./CacheService.types";
+import {
+  CacheConfig,
+  CacheEntry,
+  CacheEntryData,
+  CacheKey,
+  CacheStorage,
+} from "./CacheService.types";
 
 interface Args {
-  config?: Partial<Config>;
-  preloadedStorage?: Storage;
+  config?: Partial<CacheConfig>;
+  preloadedStorage?: CacheStorage;
 }
 
 export class CacheService {
-  private storage: Storage;
+  private storage: CacheStorage;
   private pendingBuffer: Set<string>;
-  private config: Config;
+  private config: CacheConfig;
 
   constructor({ config, preloadedStorage }: Args = {}) {
     this.storage = preloadedStorage || {};
@@ -22,12 +28,15 @@ export class CacheService {
 
   // PRIVATE
 
-  private findKeysByPattern(pattern: string): Key[] {
+  private findKeysByPattern(pattern: string): CacheKey[] {
     const keys = Object.keys(this.storage);
     return keys.filter((key) => key.includes(pattern));
   }
 
-  private syncEntryConfig(key: Key, config?: Partial<Config>): Config {
+  private syncEntryConfig(
+    key: CacheKey,
+    config?: Partial<CacheConfig>,
+  ): CacheConfig {
     return {
       ...this.config,
       ...this.storage[key]?.config,
@@ -35,7 +44,10 @@ export class CacheService {
     };
   }
 
-  private createEntry(data: EntryData, config?: Partial<Config>): Entry {
+  private createEntry(
+    data: CacheEntryData,
+    config?: Partial<CacheConfig>,
+  ): CacheEntry {
     const nextConfig = {
       ...this.config,
       ...config,
@@ -48,7 +60,10 @@ export class CacheService {
     };
   }
 
-  private getCachedIfFresh<T>(key: Key, config: Config): T | undefined {
+  private getCachedIfFresh<T>(
+    key: CacheKey,
+    config: CacheConfig,
+  ): T | undefined {
     if (key in this.storage) {
       const entry = this.storage[key];
       const isExpired = +new Date() >= entry.timestamp + config.staleTime;
@@ -60,9 +75,9 @@ export class CacheService {
   }
 
   private async refresh<T>(
-    key: Key,
+    key: CacheKey,
     fn: () => Promise<T>,
-    config: Config,
+    config: CacheConfig,
   ): Promise<T> {
     try {
       this.pendingBuffer.add(key);
@@ -77,7 +92,7 @@ export class CacheService {
     }
   }
 
-  private refreshSync<T>(key: Key, fn: () => T, config: Config): T {
+  private refreshSync<T>(key: CacheKey, fn: () => T, config: CacheConfig): T {
     try {
       this.pendingBuffer.add(key);
       const freshEntryData = fn();
@@ -93,21 +108,25 @@ export class CacheService {
 
   // PUBLIC
 
-  public createKey(key: (string | number)[]): Key {
+  public createKey(key: (string | number)[]): CacheKey {
     return key.join("-");
   }
 
-  public get<T = EntryData>(key: Key): T | undefined {
+  public get<T = CacheEntryData>(key: CacheKey): T | undefined {
     if (key in this.storage) {
       return this.storage[key].data as T;
     }
   }
 
-  public set(key: Key, data: EntryData, config?: Partial<Config>): void {
+  public set(
+    key: CacheKey,
+    data: CacheEntryData,
+    config?: Partial<CacheConfig>,
+  ): void {
     this.storage[key] = this.createEntry(data, config);
   }
 
-  public remove(key: Key, exact: boolean = true): void {
+  public remove(key: CacheKey, exact: boolean = true): void {
     if (exact && key in this.storage) {
       delete this.storage[key];
     }
@@ -121,7 +140,7 @@ export class CacheService {
     }
   }
 
-  public invalidate(key: Key, exact: boolean = true): void {
+  public invalidate(key: CacheKey, exact: boolean = true): void {
     if (exact && key in this.storage) {
       this.storage[key].isStale = true;
     }
@@ -135,7 +154,7 @@ export class CacheService {
     }
   }
 
-  public dump(): Storage {
+  public dump(): CacheStorage {
     return this.storage;
   }
 
@@ -143,10 +162,10 @@ export class CacheService {
     this.storage = {};
   }
 
-  public async cache<T = EntryData>(
-    key: Key,
+  public async cache<T = CacheEntryData>(
+    key: CacheKey,
     fn: () => Promise<T>,
-    config?: Partial<Config>,
+    config?: Partial<CacheConfig>,
   ): Promise<T> {
     const currentConfig = this.syncEntryConfig(key, config);
     return (
@@ -155,10 +174,10 @@ export class CacheService {
     );
   }
 
-  public cacheSync<T = EntryData>(
-    key: Key,
+  public cacheSync<T = CacheEntryData>(
+    key: CacheKey,
     fn: () => T,
-    config?: Partial<Config>,
+    config?: Partial<CacheConfig>,
   ): T {
     const currentConfig = this.syncEntryConfig(key, config);
     return (
