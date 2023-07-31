@@ -15,7 +15,7 @@ const CACHE_KEYS = {
   counter: "counter",
 };
 
-const delay = async (ms: number) =>
+const delay = (ms: number) =>
   new Promise((res) => setTimeout(() => res(1), ms));
 
 // ================================
