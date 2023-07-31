@@ -240,7 +240,7 @@ describe("drop", () => {
 });
 
 describe("cache", () => {
-  it("should call fn each time if staleTime=0", async () => {
+  it("should return fresh data on each call if staleTime=0", async () => {
     const cacheService = new CacheService();
     const config: Config = {
       staleTime: 0,
@@ -324,6 +324,96 @@ describe("cache", () => {
     tk.freeze(new Date(timestamp + config.staleTime));
 
     const attempt3 = await cachedFn();
+    expect(numberOfCalls).toBe(2);
+    expect(attempt3).toBe(2);
+    expect(cacheService.dump()).toEqual({
+      [cacheKey]: {
+        data: 2,
+        timestamp: timestamp + config.staleTime,
+        isStale: false,
+        config,
+      },
+    });
+  });
+});
+
+describe("cacheSync", () => {
+  it("should return fresh data on each call if staleTime=0", () => {
+    const cacheService = new CacheService();
+    const config: Config = {
+      staleTime: 0,
+    };
+
+    const timestamp = 1330688329321;
+    tk.freeze(new Date(timestamp));
+
+    let numberOfCalls = 0;
+    const fn = () => (numberOfCalls += 1);
+    const cacheKey = "foo";
+    const cachedFn = () => cacheService.cacheSync(cacheKey, fn, config);
+
+    const attempts = [1, 2, 3];
+
+    attempts.forEach((attempt) => {
+      const result = cachedFn();
+      expect(numberOfCalls).toBe(attempt);
+      expect(result).toBe(attempt);
+      expect(cacheService.dump()).toEqual({
+        [cacheKey]: {
+          data: attempt,
+          timestamp,
+          isStale: true,
+          config,
+        },
+      });
+    });
+  });
+
+  it("should cache fn result", () => {
+    const cacheService = new CacheService();
+    const config: Config = {
+      staleTime: 1000,
+    };
+
+    const timestamp = 1330688329321;
+    tk.freeze(new Date(timestamp));
+
+    let numberOfCalls = 0;
+    const fn = () => (numberOfCalls += 1);
+    const cacheKey = "foo";
+    const cachedFn = () => cacheService.cacheSync(cacheKey, fn, config);
+
+    const attempt1 = cachedFn();
+    expect(numberOfCalls).toBe(1);
+    expect(attempt1).toBe(1);
+    expect(cacheService.dump()).toEqual({
+      [cacheKey]: {
+        data: 1,
+        timestamp,
+        isStale: false,
+        config,
+      },
+    });
+
+    tk.reset();
+    tk.freeze(new Date(timestamp + config.staleTime / 2));
+
+    const attempt2 = cachedFn();
+    expect(numberOfCalls).toBe(1);
+    expect(attempt2).toBe(1);
+    expect(cacheService.dump()).toEqual({
+      [cacheKey]: {
+        data: 1,
+        timestamp,
+        isStale: false,
+        config,
+      },
+    });
+
+    tk.reset();
+    tk.freeze(new Date(timestamp + config.staleTime));
+
+    const attempt3 = cachedFn();
     expect(numberOfCalls).toBe(2);
     expect(attempt3).toBe(2);
     expect(cacheService.dump()).toEqual({
