@@ -1,5 +1,5 @@
-import { CONFIG_DEFAULT } from "./config";
-import { Config, Entry, EntryData, Key, Storage } from "./types";
+import { CONFIG_DEFAULT } from "./CacheService.config";
+import { Config, Entry, EntryData, Key, Storage } from "./CacheService.types";
 
 interface Args {
   config?: Partial<Config>;
@@ -11,7 +11,7 @@ export class CacheService {
   private pendingBuffer: Set<string>;
   private config: Config;
 
-  constructor({ config, preloadedStorage }: Args) {
+  constructor({ config, preloadedStorage }: Args = {}) {
     this.storage = preloadedStorage || {};
     this.pendingBuffer = new Set([]);
     this.config = {
@@ -35,13 +35,6 @@ export class CacheService {
     };
   }
 
-  private isStale(key: Key, staleTime: number): boolean {
-    return (
-      this.storage[key].isStale ||
-      +new Date() >= this.storage[key].timestamp + staleTime
-    );
-  }
-
   private createEntry(data: EntryData, config?: Partial<Config>): Entry {
     const nextConfig = {
       ...this.config,
@@ -57,7 +50,9 @@ export class CacheService {
 
   private getCachedIfFresh<T>(key: Key, config: Config): T | undefined {
     if (key in this.storage) {
-      const isStale = this.isStale(key, config.staleTime);
+      const entry = this.storage[key];
+      const isExpired = +new Date() >= entry.timestamp + config.staleTime;
+      const isStale = entry.isStale || isExpired;
       if (this.pendingBuffer.has(key) || !isStale) {
         return this.storage[key].data as T;
       }
@@ -131,13 +126,17 @@ export class CacheService {
       this.storage[key].isStale = true;
     }
     if (!exact) {
-      const keysToMark = this.findKeysByPattern(key);
-      if (keysToMark.length > 0) {
-        keysToMark.forEach((k) => {
+      const keysToInvalidate = this.findKeysByPattern(key);
+      if (keysToInvalidate.length > 0) {
+        keysToInvalidate.forEach((k) => {
           this.storage[k].isStale = true;
         });
       }
     }
+  }
+
+  public dump(): Storage {
+    return this.storage;
   }
 
   public drop(): void {
