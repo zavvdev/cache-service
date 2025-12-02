@@ -1,5 +1,5 @@
-import { CacheConfig } from "./CacheService.types";
+import { Config } from "./CacheService.types";
 
-export const CONFIG_DEFAULT: CacheConfig = {
+export const CONFIG_DEFAULT: Config = {
   staleTime: 0,
 };

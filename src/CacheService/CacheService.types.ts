@@ -1,17 +1,18 @@
-export type CacheKey = string;
-export type CacheEntryData = unknown;
+export type Key = string;
+export type KeyCandidate = (string | number | bigint | boolean)[];
+export type EntryData = unknown;
 
-export interface CacheConfig {
+export interface Config {
   staleTime: number;
 }
 
-export type CacheEntry<T = CacheEntryData> = {
+export type Entry<T = EntryData> = {
   data: T;
-  config: CacheConfig;
+  config: Config;
   timestamp: number;
   isStale: boolean;
 };
 
-export interface CacheStorage {
-  [key: CacheKey]: CacheEntry;
-}
+export type Storage = Map<Key, Entry>;
+
+export type PendingBuffer = Set<Key>;

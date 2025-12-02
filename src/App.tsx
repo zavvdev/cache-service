@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { CacheService } from "./CacheService/CacheService";
-import { CacheConfig, CacheStorage } from "./CacheService/CacheService.types";
+import { Config, Entry, Key } from "./CacheService/CacheService.types";
 
-const config: CacheConfig = {
+const config: Config = {
   staleTime: 5000,
 };
 
@@ -21,7 +21,9 @@ const delay = (ms: number) =>
 // ================================
 
 function App() {
-  const [storage, setStorage] = useState<CacheStorage>(cacheService.dump());
+  const [storage, setStorage] = useState<Record<Key, Entry>>(
+    cacheService.dump(),
+  );
 
   const [prices, setPrices] = useState<string[]>([]);
   const [isPricesLoading, setIsPricesLoading] = useState(false);

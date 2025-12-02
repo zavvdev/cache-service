@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import tk from "timekeeper";
 import { CacheService } from "./CacheService";
-import { CacheConfig, CacheStorage } from "./CacheService.types";
+import { Config, Storage } from "./CacheService.types";
 import { CONFIG_DEFAULT } from "./CacheService.config";
 
 // =========================================================
@@ -9,30 +9,33 @@ import { CONFIG_DEFAULT } from "./CacheService.config";
 describe("createKey", () => {
   it("should return created key", () => {
     const cacheService = new CacheService();
-    expect(cacheService.createKey(["foo", "bar", 1, 2])).toBe("foo-bar-1-2");
+    expect(cacheService.createKey(["foo", "bar", 1, 2])).toBe("foo::bar::1::2");
   });
 });
 
 // =========================================================
 
 describe("get", () => {
-  const preloadedStorage: CacheStorage = {
-    foo: {
-      data: 123,
-      timestamp: 987654321,
-      config: {
-        staleTime: 1000,
+  const preloadedStorage: Storage = new Map([
+    [
+      "foo",
+      {
+        data: 123,
+        timestamp: 987654321,
+        config: {
+          staleTime: 1000,
+        },
+        isStale: false,
       },
-      isStale: false,
-    },
-  };
+    ],
+  ]);
 
   const cacheService = new CacheService({
     preloadedStorage,
   });
 
   it("should return available cache entry", () => {
-    expect(cacheService.get("foo")).toBe(preloadedStorage.foo.data);
+    expect(cacheService.get("foo")).toBe(preloadedStorage.get("foo")!.data);
   });
 
   it("should return undefined if key is not in storage", () => {
@@ -47,8 +50,10 @@ describe("set", () => {
     const cacheService = new CacheService();
     const cachedData = { foo: 1 };
     const timestamp = 1330688329321;
+
     tk.freeze(new Date(timestamp));
     cacheService.set("foo", cachedData);
+
     expect(cacheService.dump()).toEqual({
       foo: {
         data: cachedData,
@@ -57,18 +62,22 @@ describe("set", () => {
         config: CONFIG_DEFAULT,
       },
     });
+
     tk.reset();
   });
 
   it("should create a new cache entry with custom config", () => {
     const cacheService = new CacheService();
     const cachedData = { foo: 1 };
-    const config: CacheConfig = {
+    const timestamp = 1330688329321;
+
+    const config: Config = {
       staleTime: 2000,
     };
-    const timestamp = 1330688329321;
+
     tk.freeze(new Date(timestamp));
     cacheService.set("foo", cachedData, config);
+
     expect(cacheService.dump()).toEqual({
       foo: {
         data: cachedData,
@@ -77,6 +86,7 @@ describe("set", () => {
         config,
       },
     });
+
     tk.reset();
   });
 });
@@ -85,55 +95,71 @@ describe("set", () => {
 
 describe("remove", () => {
   it("should remove cached entry from storage by exact key match", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-      foo2: {
-        data: 223,
-        timestamp: 987654322,
-        config: {
-          staleTime: 2000,
+      ],
+      [
+        "foo2",
+        {
+          data: 223,
+          timestamp: 987654322,
+          config: {
+            staleTime: 2000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
+
     cacheService.remove("foo", true);
     expect(cacheService.dump()).toEqual({
-      foo2: preloadedStorage.foo2,
+      foo2: preloadedStorage.get("foo2"),
     });
   });
 
   it("should remove cached entries from storage by partial key match", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-      foo2: {
-        data: 223,
-        timestamp: 987654322,
-        config: {
-          staleTime: 2000,
+      ],
+      [
+        "foo2",
+        {
+          data: 223,
+          timestamp: 987654322,
+          config: {
+            staleTime: 2000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
+
     cacheService.remove("foo", false);
     expect(cacheService.dump()).toEqual({});
   });
@@ -143,67 +169,84 @@ describe("remove", () => {
 
 describe("invalidate", () => {
   it("should invalidate cached entry from storage by exact key match", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-      foo2: {
-        data: 223,
-        timestamp: 987654322,
-        config: {
-          staleTime: 2000,
+      ],
+      [
+        "foo2",
+        {
+          data: 223,
+          timestamp: 987654322,
+          config: {
+            staleTime: 2000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
+
     cacheService.invalidate("foo", true);
     expect(cacheService.dump()).toEqual({
-      ...preloadedStorage,
+      ...Object.fromEntries(preloadedStorage.entries()),
       foo: {
-        ...preloadedStorage.foo,
+        ...preloadedStorage.get("foo"),
         isStale: true,
       },
     });
   });
 
   it("should invalidate cached entries from storage by partial key match", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-      foo2: {
-        data: 223,
-        timestamp: 987654322,
-        config: {
-          staleTime: 2000,
+      ],
+      [
+        "foo2",
+        {
+          data: 223,
+          timestamp: 987654322,
+          config: {
+            staleTime: 2000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
+
     cacheService.invalidate("foo", false);
+
     expect(cacheService.dump()).toEqual({
       foo: {
-        ...preloadedStorage.foo,
+        ...preloadedStorage.get("foo"),
         isStale: true,
       },
       foo2: {
-        ...preloadedStorage.foo2,
+        ...preloadedStorage.get("foo2"),
         isStale: true,
       },
     });
@@ -214,20 +257,27 @@ describe("invalidate", () => {
 
 describe("dump", () => {
   it("should return current storage", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
-    expect(cacheService.dump()).toEqual(preloadedStorage);
+
+    expect(cacheService.dump()).toEqual(
+      Object.fromEntries(preloadedStorage.entries()),
+    );
   });
 });
 
@@ -235,19 +285,24 @@ describe("dump", () => {
 
 describe("drop", () => {
   it("should remove all data from storage", () => {
-    const preloadedStorage: CacheStorage = {
-      foo: {
-        data: 123,
-        timestamp: 987654321,
-        config: {
-          staleTime: 1000,
+    const preloadedStorage: Storage = new Map([
+      [
+        "foo",
+        {
+          data: 123,
+          timestamp: 987654321,
+          config: {
+            staleTime: 1000,
+          },
+          isStale: false,
         },
-        isStale: false,
-      },
-    };
+      ],
+    ]);
+
     const cacheService = new CacheService({
       preloadedStorage,
     });
+
     cacheService.drop();
     expect(cacheService.dump()).toEqual({});
   });
@@ -258,7 +313,7 @@ describe("drop", () => {
 describe("cache", () => {
   it("should return fresh data on each call if staleTime=0", async () => {
     const cacheService = new CacheService();
-    const config: CacheConfig = {
+    const config: Config = {
       staleTime: 0,
     };
 
@@ -297,7 +352,7 @@ describe("cache", () => {
 
   it("should cache fn result", async () => {
     const cacheService = new CacheService();
-    const config: CacheConfig = {
+    const config: Config = {
       staleTime: 1000,
     };
 
@@ -358,7 +413,7 @@ describe("cache", () => {
 describe("cacheSync", () => {
   it("should return fresh data on each call if staleTime=0", () => {
     const cacheService = new CacheService();
-    const config: CacheConfig = {
+    const config: Config = {
       staleTime: 0,
     };
 
@@ -389,7 +444,7 @@ describe("cacheSync", () => {
 
   it("should cache fn result", () => {
     const cacheService = new CacheService();
-    const config: CacheConfig = {
+    const config: Config = {
       staleTime: 1000,
     };
 
